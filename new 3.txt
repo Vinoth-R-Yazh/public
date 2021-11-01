@@ -1,0 +1,105 @@
+---
+- name: Triage Alert Suppression
+  hosts: localhost
+  gather_facts: false
+  vars:
+     node_name: "{{ nodename }}"
+	 ticket_id: "{{ ticket }}"
+	 reason: "{{ Reason }}"
+	 start_time: "{{ StartTime }}"
+	 end_time: "{{ EndTime }}"
+	 user_id: "{{ UserID }}"
+	 event_id: "{{ EventID }}"
+     
+
+- name: ReadJsonfile
+    hosts: localhost
+    tasks:
+      - name: Display the JSON file content
+        shell: cat config.json
+        register: result
+
+      - name: save the Json data to a Variable as a Fact
+        set_fact:
+          jsondata: "{{ result.stdout | from_json }}"
+	
+      - name: save the Json data to a Variable as a Fact
+        set_fact:
+          jsondata: "{{ result.stdout | from_json }}"
+
+      - name: Save the Nodenames to a variable as a fact
+        set_fact:
+          nodename: "{{ jsondata | json_query(jmesquery) }}"
+        vars:
+          jmesquery: '"{{ AddV3 }}"."{{ config }}"."{{ Nodenames }}"."{{ name }}"'
+
+      - name: Save the Ticket information to a variable as a fact
+        set_fact:
+          ticket: "{{ jsondata | json_query(jmesquery) }}"
+        vars:
+          jmesquery: '"{{AddV3}}"."{{ config }}"."{{ Ticket }}"'
+
+      - name: Save the Reason to a variable as a fact
+        set_fact:
+          Reason: "{{ jsondata | json_query(jmesquery) }}"
+        vars:
+          jmesquery: '"{{ AddV3 }}"."{{ config }}"."{{ Reason }}"'
+
+      - name: Save the StartTime to a variable as a fact
+        set_fact:
+          StartTime: "{{ jsondata | json_query(jmesquery) }}"
+        vars:
+          jmesquery: '"{{ AddV3 }}"."{{ config }}"."{{ StartTime }}"'
+
+      - name: Save the EndTime to a variable as a fact
+        set_fact:
+          EndTime: "{{ jsondata | json_query(jmesquery) }}"
+        vars:
+          jmesquery: '"{{ AddV3 }}"."{{ config }}"."{{ EndTime }}"'
+      - name: Save the UserID to a variable as a fact
+        set_fact:
+          UserID: "{{ jsondata | json_query(jmesquery) }}"
+        vars:
+          jmesquery: '"{{ AddV3 }}"."{{ config }}"."{{ UserID}}"'
+      - name: Save the EventIDs to a variable as a fact
+        set_fact:
+          EventID: "{{ jsondata | json_query(jmesquery) }}"
+        vars:
+          jmesquery: '"{{ AddV3 }}". "{{ config }}"."{{ EventIDs }}"."{{ EventID }}"'
+      
+
+      - name: Debug the values
+        debug: msg=" Admin Listen Port => {{ admin_ListenPort }}, DomainName => {{ domain_name }}, DomainUserName => {{ domain_username }} , Domain Password => {{ domain_password }}"
+
+# Setting vars for this App
+
+  vars:
+      destination_host: localhost
+      destination_port: 32768
+      netbox_token: 0123456789abcdef0123456789abcdef01234567
+ 
+# Running tasks
+
+  tasks:
+      - name: REST API CALL / POST
+        uri:
+            url: http://triage.com/Suppression/Services/suppress.asmx
+            method: POST
+            headers:
+                Authorization: "Token {{ netbox_token }}"
+            body_format: json
+            body:
+                name: de-test-spine-333
+                device_type: 3
+                device_role: 3
+                site: 1
+                status: 1
+        ignore_errors: yes
+        register: rest_post
+        vars:
+            resource_path: api/dcim/devices/
+
+      - name: DEBUG / GOT INFO
+        debug:
+            msg: "{{ rest_post.json }}"
+        when: rest_post.status ==  201
